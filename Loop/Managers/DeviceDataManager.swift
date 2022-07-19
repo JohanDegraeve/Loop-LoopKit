@@ -1043,6 +1043,8 @@ extension DeviceDataManager: PumpManagerDelegate {
     }
 
     func updatePumpIsAllowingAutomation(status: PumpManagerStatus) {
+        pumpIsAllowingAutomation = true
+        return
         if case .tempBasal(let dose) = status.basalDeliveryState, !(dose.automatic ?? true), dose.endDate > Date() {
             pumpIsAllowingAutomation = false
         } else {

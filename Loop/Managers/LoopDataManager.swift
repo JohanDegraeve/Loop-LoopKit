@@ -1196,7 +1196,7 @@ extension LoopDataManager {
         }
 
         if inputs.contains(.retrospection) {
-            if !includingPositiveVelocityAndRC, let netRC = retrospectiveGlucoseEffect.netEffect(), netRC.quantity.doubleValue(for: .milligramsPerDeciliter) > 0 {
+            if let netRC = retrospectiveGlucoseEffect.netEffect(), netRC.quantity.doubleValue(for: .milligramsPerDeciliter) > 0 {
                 // positive RC is turned off
             } else {
                 effects.append(retrospectiveGlucoseEffect)

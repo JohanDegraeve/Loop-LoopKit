@@ -25,7 +25,7 @@ public class AlertPermissionsChecker: ObservableObject {
     @Published var notificationCenterSettings: NotificationCenterSettingsFlags = .none
     
     var showWarning: Bool {
-        notificationCenterSettings.requiresRiskMitigation
+        false
     }
     
     init(alertManager: AlertManager? = nil) {
