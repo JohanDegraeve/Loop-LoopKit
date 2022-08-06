@@ -1195,13 +1195,13 @@ extension LoopDataManager {
             }
         }
 
-        if inputs.contains(.retrospection) {
+       /* if inputs.contains(.retrospection) {
             if let netRC = retrospectiveGlucoseEffect.netEffect(), netRC.quantity.doubleValue(for: .milligramsPerDeciliter) > 0 {
                 // positive RC is turned off
             } else {
                 effects.append(retrospectiveGlucoseEffect)
             }
-        }
+        }*/
 
         var prediction = LoopMath.predictGlucose(startingAt: glucose, momentum: momentum, effects: effects)
 
