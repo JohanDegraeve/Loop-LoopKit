@@ -481,6 +481,32 @@ extension Collection where Element: GlucoseValue {
             volumeRounder: volumeRounder
         )
 
+        // if variable basal enabled in UserDefaults
+        // if there's no bolusUnits and no temp basal recommended
+        // if no tempbasal running at the moment
+        // if there's no basal rate schedule override active
+        // If userdefaults keyForAddManualTempBasals is set to false, other wise Loop would start making wrong predictions based on fact that basal is missing
+        // if latest reading is less than 10 minutes old
+        //    then check if current value is below avarage in correction range, and if so set temp basal at x% of actual current basal rate
+        if UserDefaults.standard.bool(forKey: "keyForUseVariableBasal") && !UserDefaults.standard.bool(forKey: "keyForAddManualTempBasals") && temp == nil && bolusUnits == 0.0 && !isBasalRateScheduleOverrideActive {
+            if (lastTempBasal != nil && lastTempBasal!.endDate < date) || lastTempBasal == nil {
+                if let first = self.first, abs(first.startDate.timeIntervalSinceNow) < 600.0 {
+
+                    // average  correction range at date
+                    // not tested for mmol
+                    let averagevalue = (correctionRange.value(at: date).maxValue  + correctionRange.value(at: date).minValue)/2
+                    
+                    if first.quantity.doubleValue(for: correctionRange.unit) < averagevalue {
+                        
+                        temp = TempBasalRecommendation(unitsPerHour: basalRates.value(at: date) * Double(UserDefaults.standard.integer(forKey: "keyForPercentageVariableBasal"))/100.0, duration: duration)
+                        // set the temp basal as if it were set by the user via UI, so allow to not include it in glucose effects calculations
+                        temp!.automatic = false
+                        
+                    }
+                }
+            }
+        }
+        
         if temp != nil || bolusUnits > 0 {
             return AutomaticDoseRecommendation(basalAdjustment: temp, bolusUnits: bolusUnits)
         }
