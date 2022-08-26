@@ -18,6 +18,54 @@ private enum InsulinCorrection {
     case suspend(min: GlucoseValue)
 }
 
+// basal rate ranges.
+
+fileprivate let lowLimitRange0 = 120.0
+fileprivate let highLimitRange0 = 160.0
+
+/// basal rates for range 0 , ie 140 - 160
+fileprivate let basalRatesForAutoBasalRange0 = [[0.3145728,0.3145728],[0.262144,0.262144],[0.2097152,0.1835008],[0.1048576,0.0786432],[0.0,0.0]]
+
+fileprivate let highLimitRange1 = 180.0
+
+/// basal rates for range 1 , ie 150 - 180
+fileprivate let basalRatesForAutoBasalRange1 = [[0.49152,0.49152],[0.4096,0.4096],[0.32768,0.28672],[0.16384,0.12288],[0.0,0.0]]
+
+fileprivate let highLimitRange2 = 200.0
+
+/// basal rates for range 2 , ie 180 - 200
+fileprivate let basalRatesForAutoBasalRange2 = [[0.6144,0.6144],[0.512,0.512],[0.4096,0.3584],[0.2048,0.1536],[0.0,0.0]]
+
+fileprivate let highLimitRange3 = 220.0
+
+/// basal rates for range 3 , ie 200 - 220
+fileprivate let basalRatesForAutoBasalRange3 = [[0.768,0.768],[0.64,0.64],[0.512,0.448],[0.256,0.192],[0.0,0.0]]
+
+fileprivate let highLimitRange4 = 250.0
+
+/// basal rates for range 4 , ie 220 - 250
+fileprivate let basalRatesForAutoBasalRange4 = [[0.96,0.96],[0.8,0.8],[0.64,0.56],[0.32,0.24],[0.0,0.0]]
+
+/// basal rates for range 5 , ie > 250
+fileprivate let basalRatesForAutoBasalRange5 = [[1.2,1.2],[1.0,1.0],[0.8,0.7],[0.4,0.3],[0.0,0.0]]
+
+/// to keep track if last temp basal was set by variable basal algorithm
+fileprivate var lastTempBasalSetByVariableBasalAlgorithm = false
+
+fileprivate func calculateIndexInRanges(glucoseTrend: GlucoseTrend) -> Int {
+    switch glucoseTrend {
+    case .flat:
+        return 2
+    case .up:
+        return 1
+    case .upUp, .upUpUp:
+        return 0
+    case .down:
+        return 3
+    case .downDown, .downDownDown:
+        return 4
+    }
+}
 
 extension InsulinCorrection {
     /// The delivery units for the correction
@@ -441,6 +489,87 @@ extension Collection where Element: GlucoseValue {
         duration: TimeInterval = .minutes(30),
         continuationInterval: TimeInterval = .minutes(11)
     ) -> AutomaticDoseRecommendation? {
+        
+        var temp: TempBasalRecommendation? = nil
+        
+        // if auto basal temp is created, then no more bolus units to calculate (ie no more microbolus)
+        var autoBasalApplied = false
+        
+        // check if autobasal is enabled and less than 3 hours old
+        if UserDefaults.standard.bool(forKey: "keyAutoBasalRunning"), let timeStampStartOfAutoBasal = UserDefaults.standard.object(forKey: "keyTimeStampStartOfAutoBasal") as? Date, let latestGlucoseTimeStamp = UserDefaults.standard.object(forKey: "keyForLatestGlucoseTimeStamp") as? Date, UserDefaults.standard.double(forKey: "keyForLatestGlucoseValue") > 0, let latestGlucoseTrend = GlucoseTrend(rawValue: UserDefaults.standard.integer(forKey: "keyForLatestGlucoseTrend")) {
+            
+            let timeSinceStart = abs(timeStampStartOfAutoBasal.timeIntervalSinceNow)
+            
+            let maxDurationAutoBasal = TimeInterval(hours: Double(UserDefaults.standard.integer(forKey: "keyForAutoBasalDurationInHours")))
+            
+            if timeSinceStart < maxDurationAutoBasal {
+
+                if abs(latestGlucoseTimeStamp.timeIntervalSinceNow) < 600.0 {
+
+                    // calculate index in ranges, is it first half or second half
+                    let indexInRanges =  timeSinceStart < maxDurationAutoBasal/2 ? 0:1
+                    
+                    // calculate index in trends
+                    let indexInTrends = calculateIndexInRanges(glucoseTrend: latestGlucoseTrend)
+                    
+                    // read latest glucose value from userdefaults
+                    let latestGlucoseValue = UserDefaults.standard.double(forKey: "keyForLatestGlucoseValue")
+                    
+                    // rate to use in temp basal, if nil then no temp basal to use
+                    var rate:Double?
+                    
+                    if latestGlucoseValue < lowLimitRange0 {
+                        // nothing to do, if there's still a temp running from previous check, then it will be canceled (see check 'if temp == nil && lastTempBasalSetByVariableBasalAlgorithm')
+                    } else if latestGlucoseValue < highLimitRange0 {
+                        rate = basalRatesForAutoBasalRange0[indexInTrends][indexInRanges]
+                    } else if latestGlucoseValue < highLimitRange1 {
+                        rate = basalRatesForAutoBasalRange1[indexInTrends][indexInRanges]
+                    } else if latestGlucoseValue < highLimitRange2 {
+                        rate = basalRatesForAutoBasalRange2[indexInTrends][indexInRanges]
+                    } else if latestGlucoseValue < highLimitRange3 {
+                        rate = basalRatesForAutoBasalRange3[indexInTrends][indexInRanges]
+                    } else if latestGlucoseValue < highLimitRange4 {
+                        rate = basalRatesForAutoBasalRange4[indexInTrends][indexInRanges]
+                    } else {
+                        rate = basalRatesForAutoBasalRange5[indexInTrends][indexInRanges]
+                    }
+                    
+                    if let rate = rate {
+
+                        // basal rate arrays are normalized values, with max 1 when trend is up and value higher than 250 - those rates wiill be multipled with autoBasalMultiplicationFactor
+                        var rateToUse = rate * UserDefaults.standard.double(forKey: "keyAutoBasalMultiplier")
+                        rateToUse = rateRounder?(rateToUse) ?? rateToUse
+
+                        temp = TempBasalRecommendation(unitsPerHour: rateToUse, duration: duration)
+                        
+                        lastTempBasalSetByVariableBasalAlgorithm = true
+                        
+                        autoBasalApplied = true
+
+                    }
+                    
+                }
+
+            } else {
+                // UserDefaults.standard.object(forKey: "keyTimeStampStartOfAutoBasal") still has a value but it passed the max duration
+                // let's set it to nil and also disable keyAutoBasalRunning
+                UserDefaults.standard.set(nil, forKey: "keyTimeStampStartOfAutoBasal")
+                
+                UserDefaults.standard.set(false, forKey: "keyAutoBasalRunning")
+                
+            }
+            
+        }
+        
+        // if last temp basal was set by variable basal algo, but algo does not recommend any temp basal now, then cancel the lastest one
+        if temp == nil && lastTempBasalSetByVariableBasalAlgorithm {
+            if let lastTempBasal = lastTempBasal, lastTempBasal.type == .tempBasal, lastTempBasal.endDate > date {
+                
+                temp = .cancel
+                
+            }
+        }
+        
         guard let correction = self.insulinCorrection(
             to: correctionRange,
             at: date,
@@ -460,12 +589,15 @@ extension Collection where Element: GlucoseValue {
             maxAutomaticBolus = 0
         }
 
-        var temp: TempBasalRecommendation? = correction.asTempBasal(
-            scheduledBasalRate: scheduledBasalRate,
-            maxBasalRate: scheduledBasalRate,
-            duration: duration,
-            rateRounder: rateRounder
-        )
+        // if no temp basal set yet by automatic basal, then calculate temp basal as done originally by Loop
+        if temp == nil {
+            temp = correction.asTempBasal(
+                scheduledBasalRate: scheduledBasalRate,
+                maxBasalRate: scheduledBasalRate,
+                duration: duration,
+                rateRounder: rateRounder
+            )
+        }
 
         temp = temp?.ifNecessary(
             at: date,
@@ -475,11 +607,11 @@ extension Collection where Element: GlucoseValue {
             scheduledBasalRateMatchesPump: !isBasalRateScheduleOverrideActive
         )
 
-        let bolusUnits = correction.asPartialBolus(
-            partialApplicationFactor: partialApplicationFactor,
-            maxBolusUnits: maxAutomaticBolus,
-            volumeRounder: volumeRounder
-        )
+        var bolusUnits = 0.0
+        
+        if !autoBasalApplied {
+             bolusUnits = correction.asPartialBolus(partialApplicationFactor: partialApplicationFactor, maxBolusUnits: maxAutomaticBolus, volumeRounder: volumeRounder)
+        }
 
         // if variable basal enabled in UserDefaults
         // if there's no bolusUnits and no temp basal recommended
@@ -488,7 +620,7 @@ extension Collection where Element: GlucoseValue {
         // If userdefaults keyForAddManualTempBasals is set to false, other wise Loop would start making wrong predictions based on fact that basal is missing
         // if latest reading is less than 10 minutes old
         //    then check if current value is below avarage in correction range, and if so set temp basal at x% of actual current basal rate
-        if UserDefaults.standard.bool(forKey: "keyForUseVariableBasal") && !UserDefaults.standard.bool(forKey: "keyForAddManualTempBasals") && temp == nil && bolusUnits == 0.0 && !isBasalRateScheduleOverrideActive {
+        if UserDefaults.standard.bool(forKey: "keyForUseVariableBasal") && temp == nil && bolusUnits == 0.0 && !isBasalRateScheduleOverrideActive {
             if (lastTempBasal != nil && lastTempBasal!.endDate < date) || lastTempBasal == nil {
                 if let first = self.first, abs(first.startDate.timeIntervalSinceNow) < 600.0 {
 
@@ -497,7 +629,7 @@ extension Collection where Element: GlucoseValue {
                     let averagevalue = (correctionRange.value(at: date).maxValue  + correctionRange.value(at: date).minValue)/2
                     
                     if first.quantity.doubleValue(for: correctionRange.unit) < averagevalue {
-                        
+
                         temp = TempBasalRecommendation(unitsPerHour: basalRates.value(at: date) * Double(UserDefaults.standard.integer(forKey: "keyForPercentageVariableBasal"))/100.0, duration: duration)
                         // set the temp basal as if it were set by the user via UI, so allow to not include it in glucose effects calculations
                         temp!.automatic = false
