@@ -495,7 +495,7 @@ extension Collection where Element: GlucoseValue {
         // if auto basal temp is created, then no more bolus units to calculate (ie no more microbolus)
         var autoBasalApplied = false
         
-        // check if autobasal is enabled and less than 3 hours old
+        // check if autobasal is enabled and less than maxDurationAutoBasal hours old
         if UserDefaults.standard.bool(forKey: "keyAutoBasalRunning"), let timeStampStartOfAutoBasal = UserDefaults.standard.object(forKey: "keyTimeStampStartOfAutoBasal") as? Date, let latestGlucoseTimeStamp = UserDefaults.standard.object(forKey: "keyForLatestGlucoseTimeStamp") as? Date, UserDefaults.standard.double(forKey: "keyForLatestGlucoseValue") > 0, let latestGlucoseTrend = GlucoseTrend(rawValue: UserDefaults.standard.integer(forKey: "keyForLatestGlucoseTrend")) {
             
             let timeSinceStart = abs(timeStampStartOfAutoBasal.timeIntervalSinceNow)
@@ -546,28 +546,28 @@ extension Collection where Element: GlucoseValue {
                         
                         autoBasalApplied = true
 
+                    } else {
+
+                        // if last temp basal was set by variable basal algo, but algo does not recommend any temp basal now, then cancel the lastest one
+                        if temp == nil && lastTempBasalSetByVariableBasalAlgorithm {
+                            if let lastTempBasal = lastTempBasal, lastTempBasal.type == .tempBasal, lastTempBasal.endDate > date {
+                                
+                                temp = .cancel
+                                
+                            }
+                        }
+
                     }
                     
                 }
 
             } else {
-                // UserDefaults.standard.object(forKey: "keyTimeStampStartOfAutoBasal") still has a value but it passed the max duration
-                // let's set it to nil and also disable keyAutoBasalRunning
-                UserDefaults.standard.set(nil, forKey: "keyTimeStampStartOfAutoBasal")
-                
+                // UserDefaults.standard.object(forKey: "keyAutoBasalRunning") still true but it passed the max duration
+                // let's set it to false
                 UserDefaults.standard.set(false, forKey: "keyAutoBasalRunning")
                 
             }
             
-        }
-        
-        // if last temp basal was set by variable basal algo, but algo does not recommend any temp basal now, then cancel the lastest one
-        if temp == nil && lastTempBasalSetByVariableBasalAlgorithm {
-            if let lastTempBasal = lastTempBasal, lastTempBasal.type == .tempBasal, lastTempBasal.endDate > date {
-                
-                temp = .cancel
-                
-            }
         }
         
         guard let correction = self.insulinCorrection(
@@ -617,10 +617,10 @@ extension Collection where Element: GlucoseValue {
         // if there's no bolusUnits and no temp basal recommended
         // if no tempbasal running at the moment
         // if there's no basal rate schedule override active
-        // If userdefaults keyForAddManualTempBasals is set to false, other wise Loop would start making wrong predictions based on fact that basal is missing
+        // if manual temp basals are not added in glucose effect calculation
         // if latest reading is less than 10 minutes old
         //    then check if current value is below avarage in correction range, and if so set temp basal at x% of actual current basal rate
-        if UserDefaults.standard.bool(forKey: "keyForUseVariableBasal") && temp == nil && bolusUnits == 0.0 && !isBasalRateScheduleOverrideActive {
+        if UserDefaults.standard.bool(forKey: "keyForUseVariableBasal") && !UserDefaults.standard.bool(forKey: "keyForAddManualTempBasals") && temp == nil && bolusUnits == 0.0 && !isBasalRateScheduleOverrideActive {
             if (lastTempBasal != nil && lastTempBasal!.endDate < date) || lastTempBasal == nil {
                 if let first = self.first, abs(first.startDate.timeIntervalSinceNow) < 600.0 {
 
