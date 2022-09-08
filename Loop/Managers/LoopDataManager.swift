@@ -752,10 +752,11 @@ extension LoopDataManager {
             
             // Ensure Loop does not happen more than once every 4.5 minutes; this is important for correct usage of automatic bolus
             // partial application factor
-            if let lastLoopCompleted = self.lastLoopCompleted, Date().timeIntervalSince(lastLoopCompleted) < TimeInterval(minutes: 4.5) {
+            // commented out because I use bolusApplicationFactor = 1.0 (see LoopConstants.swift
+            /*if let lastLoopCompleted = self.lastLoopCompleted, Date().timeIntervalSince(lastLoopCompleted) < TimeInterval(minutes: 4.5) {
                 self.logger.default("Skipping loop() attempt as last loop completed at %{public}@", String(describing: lastLoopCompleted))
                 return
-            }
+            }*/
 
             self.logger.default("Loop running")
             NotificationCenter.default.post(name: .LoopRunning, object: self)
