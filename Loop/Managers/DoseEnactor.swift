@@ -27,7 +27,7 @@ class DoseEnactor {
                 self.log.default("Enacting recommend basal change")
 
                 doseDispatchGroup.enter()
-                pumpManager.enactTempBasal(unitsPerHour: basalAdjustment.unitsPerHour, for: basalAdjustment.duration, automatic: basalAdjustment.automatic, completion: { error in
+                pumpManager.enactTempBasal(unitsPerHour: basalAdjustment.unitsPerHour, for: basalAdjustment.duration, completion: { error in
                     if let error = error {
                         tempBasalError = error
                     }

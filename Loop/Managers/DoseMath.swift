@@ -620,7 +620,7 @@ extension Collection where Element: GlucoseValue {
         // if manual temp basals are not added in glucose effect calculation
         // if latest reading is less than 10 minutes old
         //    then check if current value is below avarage in correction range, and if so set temp basal at x% of actual current basal rate
-        if UserDefaults.standard.bool(forKey: "keyForUseVariableBasal") && !UserDefaults.standard.bool(forKey: "keyForAddManualTempBasals") && temp == nil && bolusUnits == 0.0 && !isBasalRateScheduleOverrideActive {
+        if UserDefaults.standard.bool(forKey: "keyForUseVariableBasal") && temp == nil && bolusUnits == 0.0 && !isBasalRateScheduleOverrideActive {
             if (lastTempBasal != nil && lastTempBasal!.endDate < date) || lastTempBasal == nil {
                 if let first = self.first, abs(first.startDate.timeIntervalSinceNow) < 600.0 {
 
