@@ -492,9 +492,6 @@ extension Collection where Element: GlucoseValue {
         
         var temp: TempBasalRecommendation? = nil
         
-        // if auto basal temp is created, then no more bolus units to calculate (ie no more microbolus)
-        var autoBasalApplied = false
-        
         // check if autobasal is enabled and less than maxDurationAutoBasal hours old
         if UserDefaults.standard.bool(forKey: "keyAutoBasalRunning"), let timeStampStartOfAutoBasal = UserDefaults.standard.object(forKey: "keyTimeStampStartOfAutoBasal") as? Date, let latestGlucoseTimeStamp = UserDefaults.standard.object(forKey: "keyForLatestGlucoseTimeStamp") as? Date, UserDefaults.standard.double(forKey: "keyForLatestGlucoseValue") > 0, let latestGlucoseTrend = GlucoseTrend(rawValue: UserDefaults.standard.integer(forKey: "keyForLatestGlucoseTrend")) {
             
@@ -548,8 +545,6 @@ extension Collection where Element: GlucoseValue {
                         
                         lastTempBasalSetByVariableBasalAlgorithm = true
                         
-                        autoBasalApplied = true
-
                     } else {
 
                         // if last temp basal was set by variable basal algo, but algo does not recommend any temp basal now, then cancel the lastest one
@@ -611,11 +606,7 @@ extension Collection where Element: GlucoseValue {
             scheduledBasalRateMatchesPump: !isBasalRateScheduleOverrideActive
         )
 
-        var bolusUnits = 0.0
-        
-        if !autoBasalApplied {
-             bolusUnits = correction.asPartialBolus(partialApplicationFactor: partialApplicationFactor, maxBolusUnits: maxAutomaticBolus, volumeRounder: volumeRounder)
-        }
+        let bolusUnits = correction.asPartialBolus(partialApplicationFactor: partialApplicationFactor, maxBolusUnits: maxAutomaticBolus, volumeRounder: volumeRounder)
 
         // if variable basal enabled in UserDefaults
         // if there's no bolusUnits and no temp basal recommended
