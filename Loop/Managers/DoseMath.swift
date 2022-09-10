@@ -24,30 +24,30 @@ fileprivate let lowLimitRange0 = 120.0
 fileprivate let highLimitRange0 = 160.0
 
 /// basal rates for range 0 , ie 140 - 160
-fileprivate let basalRatesForAutoBasalRange0 = [[0.3145728,0.3145728],[0.262144,0.262144],[0.2097152,0.1835008],[0.1048576,0.0786432],[0.0,0.0]]
+fileprivate let basalRatesForAutoBasalRange0 = [[0.37748736,0.3145728,0.3145728],[0.3145728,0.262144,0.262144],[0.25165824,0.2097152,0.1835008],[0.12582912,0.1048576,0.0786432],[0.0,0.0,0.0]]
 
 fileprivate let highLimitRange1 = 180.0
 
 /// basal rates for range 1 , ie 150 - 180
-fileprivate let basalRatesForAutoBasalRange1 = [[0.49152,0.49152],[0.4096,0.4096],[0.32768,0.28672],[0.16384,0.12288],[0.0,0.0]]
+fileprivate let basalRatesForAutoBasalRange1 = [[0.589824,0.49152,0.49152],[0.49152,0.4096,0.4096],[0.393216,0.32768,0.28672],[0.196608,0.16384,0.12288],[0.0,0.0,0.0]]
 
 fileprivate let highLimitRange2 = 200.0
 
 /// basal rates for range 2 , ie 180 - 200
-fileprivate let basalRatesForAutoBasalRange2 = [[0.6144,0.6144],[0.512,0.512],[0.4096,0.3584],[0.2048,0.1536],[0.0,0.0]]
+fileprivate let basalRatesForAutoBasalRange2 = [[0.73728,0.6144,0.6144],[0.6144,0.512,0.512],[0.49152,0.4096,0.3584],[0.24576,0.2048,0.1536],[0.0,0.0,0.0]]
 
 fileprivate let highLimitRange3 = 220.0
 
 /// basal rates for range 3 , ie 200 - 220
-fileprivate let basalRatesForAutoBasalRange3 = [[0.768,0.768],[0.64,0.64],[0.512,0.448],[0.256,0.192],[0.0,0.0]]
+fileprivate let basalRatesForAutoBasalRange3 = [[0.9216,0.768,0.768],[0.768,0.64,0.64],[0.6144,0.512,0.448],[0.3072,0.256,0.192],[0.0,0.0,0.0]]
 
 fileprivate let highLimitRange4 = 250.0
 
 /// basal rates for range 4 , ie 220 - 250
-fileprivate let basalRatesForAutoBasalRange4 = [[0.96,0.96],[0.8,0.8],[0.64,0.56],[0.32,0.24],[0.0,0.0]]
+fileprivate let basalRatesForAutoBasalRange4 = [[1.152,0.96,0.96],[0.96,0.8,0.8],[0.768,0.64,0.56],[0.384,0.32,0.24],[0.0,0.0,0.0]]
 
 /// basal rates for range 5 , ie > 250
-fileprivate let basalRatesForAutoBasalRange5 = [[1.2,1.2],[1.0,1.0],[0.8,0.7],[0.4,0.3],[0.0,0.0]]
+fileprivate let basalRatesForAutoBasalRange5 = [[1.44,1.2,1.2],[1.2,1.0,1.0],[0.96,0.8,0.7],[0.48,0.4,0.3],[0.0,0.0,0.0]]
 
 /// to keep track if last temp basal was set by variable basal algorithm
 fileprivate var lastTempBasalSetByVariableBasalAlgorithm = false
@@ -506,8 +506,12 @@ extension Collection where Element: GlucoseValue {
 
                 if abs(latestGlucoseTimeStamp.timeIntervalSinceNow) < 600.0 {
 
-                    // calculate index in ranges, is it first half or second half
-                    let indexInRanges =  timeSinceStart < maxDurationAutoBasal/2 ? 0:1
+                    // calculate index in ranges, is it first quarter, last querter, or in between
+                    let indexInRanges:Int = {
+                        if timeSinceStart < maxDurationAutoBasal*0.25 {return 0}
+                        if timeSinceStart < maxDurationAutoBasal*0.75 {return 1}
+                        return 2
+                    }()
                     
                     // calculate index in trends
                     let indexInTrends = calculateIndexInRanges(glucoseTrend: latestGlucoseTrend)
