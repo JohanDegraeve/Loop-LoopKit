@@ -626,8 +626,13 @@ extension Collection where Element: GlucoseValue {
                     if first.quantity.doubleValue(for: correctionRange.unit) < averagevalue {
 
                         temp = TempBasalRecommendation(unitsPerHour: basalRates.value(at: date) * Double(UserDefaults.standard.integer(forKey: "keyForPercentageVariableBasal"))/100.0, duration: duration)
-                        // set the temp basal as if it were set by the user via UI, so allow to not include it in glucose effects calculations
+                        
+                        // don't take into account temp basals by variable basal algorithm
+                        // - abusing here manuallyEntered and automatic
+                        //   - manuallyEntered true means it's set by variable basal algorithm
+                        //   - automatic = false, is to avoid that normal Loop stops this type of temp basal
                         temp!.automatic = false
+                        temp?.manuallyEntered = true
                         
                     }
                 }

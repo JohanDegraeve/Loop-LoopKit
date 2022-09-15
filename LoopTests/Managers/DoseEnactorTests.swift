@@ -95,7 +95,7 @@ class MockPumpManager: PumpManager {
         completion(.success(nil))
     }
     
-    func enactTempBasal(unitsPerHour: Double, for duration: TimeInterval, completion: @escaping (PumpManagerError?) -> Void) {
+    func enactTempBasal(unitsPerHour: Double, for duration: TimeInterval, automatic: Bool = true, manuallyEntered: Bool = false, completion: @escaping (PumpManagerError?) -> Void) {
         enactTempBasalCalled?(unitsPerHour, duration)
         completion(enactTempBasalError)
     }
