@@ -50,7 +50,7 @@ fileprivate let basalRatesForAutoBasalRange4 = [[1.152,0.96,0.96],[0.96,0.8,0.8]
 fileprivate let basalRatesForAutoBasalRange5 = [[1.44,1.2,1.2],[1.2,1.0,1.0],[0.96,0.8,0.7],[0.48,0.4,0.3],[0.0,0.0,0.0]]
 
 /// to keep track if last temp basal was set by variable basal algorithm
-fileprivate var lastTempBasalSetByVariableBasalAlgorithm = false
+fileprivate var lastTempBasalSetByAutoBasalAlgorithm = false
 
 fileprivate func calculateIndexInRanges(glucoseTrend: GlucoseTrend) -> Int {
     switch glucoseTrend {
@@ -543,12 +543,13 @@ extension Collection where Element: GlucoseValue {
 
                         temp = TempBasalRecommendation(unitsPerHour: rateToUse, duration: duration)
                         
-                        lastTempBasalSetByVariableBasalAlgorithm = true
+                        lastTempBasalSetByAutoBasalAlgorithm = true
                         
                     } else {
 
-                        // if last temp basal was set by variable basal algo, but algo does not recommend any temp basal now, then cancel the lastest one
-                        if temp == nil && lastTempBasalSetByVariableBasalAlgorithm {
+                        // if last temp basal was set by auto basal algo, but algo does not recommend any temp basal now, then cancel the lastest one
+                        if temp == nil && lastTempBasalSetByAutoBasalAlgorithm {
+                            
                             if let lastTempBasal = lastTempBasal, lastTempBasal.type == .tempBasal, lastTempBasal.endDate > date {
                                 
                                 temp = .cancel
