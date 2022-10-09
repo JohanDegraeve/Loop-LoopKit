@@ -505,7 +505,7 @@ extension Collection where Element: GlucoseValue {
 
                     // calculate index in ranges, is it first quarter, last querter, or in between
                     let indexInRanges:Int = {
-                        if timeSinceStart < maxDurationAutoBasal*0.25 {return 0}
+                        if timeSinceStart < maxDurationAutoBasal*0.5 {return 0}
                         if timeSinceStart < maxDurationAutoBasal*0.75 {return 1}
                         return 2
                     }()
