@@ -1190,10 +1190,10 @@ extension LoopDataManager {
         }
         
         // don't include positive velocity during the night
-        let hour = Calendar.current.component(.hour, from: Date())
+        //let hour = Calendar.current.component(.hour, from: Date())
         
         if inputs.contains(.momentum), let momentumEffect = self.glucoseMomentumEffect {
-            if (!includingPositiveVelocityAndRC || hour < 8), let netMomentum = momentumEffect.netEffect(), netMomentum.quantity.doubleValue(for: .milligramsPerDeciliter) > 0 {
+            if let netMomentum = momentumEffect.netEffect(), netMomentum.quantity.doubleValue(for: .milligramsPerDeciliter) > 0 {
                 momentum = []
             } else {
                 momentum = momentumEffect
